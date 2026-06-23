@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GridGuard: Neighborhood Energy Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --green: #16A34A; --green-light: #DCFCE7; --green-dark: #15803D;
+  --blue: #2563EB; --blue-light: #DBEAFE;
+  --amber: #D97706; --amber-light: #FEF3C7;
+  --red: #DC2626; --red-light: #FEE2E2;
+  --bg: #F7F8FA; --card: #FFFFFF; --card-alt: #F1F4F8;
+  --border: #E2E8F0; --text: #1E293B; --muted: #64748B; --accent: #16A34A;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+a { color: var(--blue); cursor: pointer; }
+.hidden { display: none !important; }
+
+/* NAV */
+nav { background: var(--card); border-bottom: 1px solid var(--border); height: 56px; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+.nav-logo { font-size: 18px; font-weight: 700; color: var(--accent); }
+.nav-logo span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.nav-tabs { display: flex; gap: 4px; }
+.nav-tab { padding: 6px 14px; font-size: 13px; border-radius: 6px; color: var(--muted); border: none; background: none; cursor: pointer; transition: all 0.15s; }
+.nav-tab:hover { color: var(--text); background: var(--card-alt); }
+.nav-tab.active { color: var(--accent); background: var(--green-light); font-weight: 600; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.user-greeting { font-size: 13px; color: var(--muted); }
+
+/* PAGES */
+.page { display: none; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+.page.active { display: block; }
+.auth-page { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
+.auth-page.active { display: flex; }
+
+/* AUTH CARDS */
+.auth-card, .landing-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 2.5rem; max-width: 400px; width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+}
+.landing-card { max-width: 480px; text-align: center; }
+.landing-title { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+.landing-sub { font-size: 14px; color: var(--muted); line-height: 1.7; margin-bottom: 1.75rem; }
+.auth-logo { font-size: 22px; font-weight: 800; color: var(--accent); margin-bottom: 1.5rem; }
+.auth-title { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+.auth-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; line-height: 1.5; }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.form-group input { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); outline: none; }
+.form-group input:focus { border-color: var(--accent); }
+.form-error { font-size: 13px; color: var(--red); margin-bottom: 10px; min-height: 18px; }
+.auth-switch { font-size: 13px; color: var(--muted); text-align: center; margin-top: 1.25rem; }
+.auth-switch a { font-weight: 600; }
+
+/* BUTTONS */
+.btn-primary { background: var(--accent); color: #fff; font-size: 14px; font-weight: 700; padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.15s; }
+.btn-primary:hover { background: var(--green-dark); }
+.btn-ghost { background: var(--card); color: var(--text); font-size: 14px; font-weight: 500; padding: 10px 24px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: all 0.15s; }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-full { width: 100%; }
+.btn-large { font-size: 16px; padding: 14px 32px; }
+.btn-sm { font-size: 12px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border); background: var(--card-alt); color: var(--text); cursor: pointer; white-space: nowrap; }
+.btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* INTRO PAGE */
+.intro-hero { text-align: center; padding: 3rem 0 2rem; }
+.hero-tag { display: inline-block; background: var(--green-light); color: var(--green-dark); border: 1px solid var(--green); font-size: 12px; font-weight: 600; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; margin-bottom: 1.5rem; }
+.intro-hero h1 { font-size: 42px; font-weight: 800; margin-bottom: 1rem; }
+.intro-hero h1 em { color: var(--accent); font-style: normal; }
+.intro-lead { font-size: 16px; color: var(--muted); max-width: 600px; margin: 0 auto; line-height: 1.7; }
+.intro-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 2.5rem 0; }
+.intro-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; text-align: center; }
+.intro-icon { font-size: 32px; margin-bottom: 0.75rem; }
+.intro-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.intro-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.intro-cta { text-align: center; padding: 1rem 0 3rem; }
+
+/* STAT ROW */
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 2rem; }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-align: center; }
+.stat-card .big { font-size: 32px; font-weight: 800; color: var(--accent); }
+.stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* TWO COLUMN */
+.two-col { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+.panel-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 1.25rem; }
+
+/* SLIDERS */
+.slider-group { margin-bottom: 1.4rem; }
+.slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.slider-label { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.slider-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.icon-green { background: var(--green-light); } .icon-blue { background: var(--blue-light); } .icon-amber { background: var(--amber-light); }
+.slider-val { font-size: 18px; font-weight: 700; color: var(--accent); min-width: 40px; text-align: right; }
+.slider-desc { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--border); outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card); box-shadow: 0 0 0 2px var(--accent); cursor: pointer; }
+
+/* EVENT BUTTONS */
+.event-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 1.25rem; }
+.evt-btn { background: var(--card-alt); border: 1px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; text-align: left; transition: all 0.15s; }
+.evt-btn:hover, .evt-btn.active { border-color: var(--accent); background: var(--green-light); }
+.evt-btn .eicon { font-size: 20px; margin-bottom: 5px; display: block; }
+.evt-btn .ename { font-size: 12px; font-weight: 600; display: block; margin-bottom: 2px; }
+.evt-btn .edesc { font-size: 11px; color: var(--muted); display: block; }
+.evt-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; margin-top: 5px; }
+.badge-danger { background: var(--red-light); color: var(--red); }
+.badge-warn { background: var(--amber-light); color: var(--amber); }
+.badge-neutral { background: var(--border); color: var(--muted); }
+
+/* RESULT PANEL */
+.result-main { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; transition: border-color 0.4s; }
+.result-main.state-green { border-color: var(--green); } .result-main.state-amber { border-color: var(--amber); }
+.result-main.state-red { border-color: var(--red); } .result-main.state-blue { border-color: var(--blue); }
+.result-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; }
+.result-risk { font-size: 64px; font-weight: 900; line-height: 1; transition: color 0.4s; }
+.result-risk.state-green { color: var(--green); } .result-risk.state-amber { color: var(--amber); }
+.result-risk.state-red { color: var(--red); } .result-risk.state-blue { color: var(--blue); }
+.result-risk sub { font-size: 22px; font-weight: 500; }
+.result-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.ml-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.ml-conf { font-size: 20px; font-weight: 700; color: var(--accent); }
+.ml-sub { font-size: 11px; color: var(--muted); }
+.result-alert { border-radius: 10px; padding: 14px 16px; margin-bottom: 1.25rem; transition: background 0.4s; }
+.result-alert.state-green { background: var(--green-light); border: 1px solid var(--green); }
+.result-alert.state-amber { background: var(--amber-light); border: 1px solid var(--amber); }
+.result-alert.state-red { background: var(--red-light); border: 1px solid var(--red); }
+.result-alert.state-blue { background: var(--blue-light); border: 1px solid var(--blue); }
+.result-alert-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; transition: color 0.4s; }
+.result-alert-title.state-green { color: var(--green-dark); } .result-alert-title.state-amber { color: var(--amber); }
+.result-alert-title.state-red { color: var(--red); } .result-alert-title.state-blue { color: var(--blue); }
+.result-alert-body { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.bar-section { margin-bottom: 1.25rem; }
+.bar-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.bar-label-supply { color: var(--green-dark); } .bar-label-load { color: var(--red); }
+.bar-bg { height: 10px; background: var(--card-alt); border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+.bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s; }
+.bar-supply { background: var(--green); } .bar-load { background: var(--red); }
+.mini-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1.25rem; }
+.mini-stat { background: var(--card-alt); border-radius: 8px; padding: 10px 12px; }
+.mini-stat .ms-val { font-size: 20px; font-weight: 700; }
+.mini-stat .ms-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.chart-wrap { position: relative; height: 160px; }
+
+/* Savings tips: tap-to-reveal */
+.savings-panel-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.saving-item {
+  border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden;
+  transition: border-color 0.15s;
+}
+.saving-item:hover { border-color: var(--accent); }
+.saving-trigger {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; cursor: pointer;
+  font-size: 13px; font-weight: 600;
+}
+.saving-trigger .s-left { display: flex; align-items: center; gap: 10px; }
+.saving-trigger .s-icon { font-size: 18px; }
+.saving-trigger .s-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+.s-badge.high   { background: var(--green-light); color: var(--green-dark); }
+.s-badge.medium { background: var(--amber-light); color: var(--amber); }
+.s-badge.low    { background: var(--blue-light); color: var(--blue); }
+.saving-trigger .s-arrow { font-size: 11px; color: var(--muted); margin-left: 8px; transition: transform 0.2s; }
+.saving-item.open .s-arrow { transform: rotate(180deg); }
+.saving-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; font-size: 13px; color: var(--muted); line-height: 1.6; }
+.saving-body.open { max-height: 200px; }
+.saving-body-inner { padding: 0 14px 12px; }
+
+/* SCENARIOS PAGE */
+.scenario-empty { text-align: center; padding: 3rem; color: var(--muted); }
+.scenario-empty .big-icon { font-size: 48px; margin-bottom: 1rem; opacity: 0.4; }
+.empty-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.empty-sub { font-size: 13px; }
+.scenario-list { display: flex; flex-direction: column; gap: 10px; }
+.scenario-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.scenario-card .sc-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.scenario-card .sc-meta { font-size: 12px; color: var(--muted); }
+.scenario-card .sc-risk { font-size: 22px; font-weight: 800; }
+.scenario-card .sc-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.chip { font-size: 11px; background: var(--card-alt); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; color: var(--muted); }
+.sc-actions { display: flex; gap: 8px; }
+
+/* INFO PAGE */
+.info-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.info-tab-btn { padding: 8px 18px; border: 1px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; color: var(--muted); background: var(--card); cursor: pointer; transition: all 0.15s; }
+.info-tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.info-tab-btn.active { background: var(--green-light); color: var(--green-dark); border-color: var(--green); }
+.info-section { display: none; }
+.info-section.active { display: block; }
+
+/* ACCORDION (generic, used in Info page) */
+.acc-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+.acc-item { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.acc-item:hover { border-color: var(--accent); }
+.acc-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; cursor: pointer; user-select: none;
+}
+.acc-head-left { display: flex; align-items: center; gap: 12px; }
+.acc-head-icon { font-size: 22px; }
+.acc-head-title { font-size: 14px; font-weight: 600; }
+.acc-head-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+.badge-green { background: var(--green-light); color: var(--green-dark); }
+.badge-amber { background: var(--amber-light); color: var(--amber); }
+.badge-blue  { background: var(--blue-light); color: var(--blue); }
+.acc-head-arrow { font-size: 11px; color: var(--muted); transition: transform 0.2s; }
+.acc-item.open .acc-head-arrow { transform: rotate(180deg); }
+.acc-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; font-size: 13px; color: var(--muted); line-height: 1.7; }
+.acc-body.open { max-height: 400px; }
+.acc-body-inner { padding: 0 16px 16px; padding-left: 52px; }
+
+/* STATS BAR in info page */
+.info-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.info-stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; text-align: center; }
+.info-stat-card .big { font-size: 26px; font-weight: 900; color: var(--accent); }
+.info-stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+
+/* GOVT PAGE */
+.govt-hero-strip { background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%); border: 1px solid var(--border); border-radius: 14px; padding: 2rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1.5rem; }
+.govt-hero-emoji { font-size: 48px; flex-shrink: 0; }
+.govt-hero-strip h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+.govt-hero-strip h2 em { color: var(--accent); font-style: normal; }
+.govt-hero-strip p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+/* Pillars as icon cards */
+.pillars-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.pillar-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+.pillar-icon { font-size: 28px; margin-bottom: 8px; }
+.pillar-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 6px; }
+.pillar-title { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.pillar-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.ptag { font-size: 11px; background: var(--card-alt); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; color: var(--muted); }
+
+/* Roadmap: horizontal steps */
+.roadmap { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-bottom: 1.5rem; position: relative; }
+.roadmap::before { content: ''; position: absolute; top: 20px; left: 10%; right: 10%; height: 2px; background: var(--border); z-index: 0; }
+.roadmap-step { display: flex; flex-direction: column; align-items: center; text-align: center; position: relative; z-index: 1; padding: 0 8px; }
+.roadmap-dot { width: 40px; height: 40px; border-radius: 50%; background: var(--green-light); border: 2px solid var(--green); display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 10px; background: white; }
+.roadmap-phase { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; letter-spacing: 0.06em; }
+.roadmap-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.roadmap-body { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* SDG chips */
+.sdg-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1.5rem; }
+.sdg-chip { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+.sdg-chip .sdg-num { font-size: 18px; font-weight: 900; color: var(--accent); min-width: 32px; }
+.sdg-chip .sdg-text strong { display: block; font-size: 13px; font-weight: 700; }
+.sdg-chip .sdg-text span { font-size: 11px; color: var(--muted); }
+
+/* Countries: compact flags row */
+.countries-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; }
+.country-pill { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; }
+.country-pill .flag { font-size: 20px; }
+.country-pill .cname { font-size: 13px; font-weight: 600; }
+.country-pill .cdesc { font-size: 11px; color: var(--muted); }
+
+/* section titles */
+.section-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+.section-sub { font-size: 14px; color: var(--muted); margin-bottom: 1.5rem; }
+.sub-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.sub-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 8px; }
+.divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+.page-nav { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
+/* TOAST */
+#toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 999; }
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── BILL PAGE ─────────────────────────── */
+
+.bill-header-card {
+  background: linear-gradient(135deg, #0f4c2a 0%, #16A34A 100%);
+  border-radius: 14px; padding: 1.5rem 2rem;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px; color: #fff;
+}
+.bill-utility-logo { font-size: 16px; font-weight: 800; margin-bottom: 5px; }
+.bill-period { font-size: 12px; opacity: 0.85; margin-bottom: 3px; }
+.bill-account { font-size: 11px; opacity: 0.7; }
+.bill-header-right { text-align: right; }
+.bill-amount-label { font-size: 11px; opacity: 0.8; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+.bill-amount { font-size: 38px; font-weight: 900; line-height: 1; }
+.bill-kwh-tag { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+
+.bill-inputs-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 12px; }
+.bill-inputs-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; }
+.bi-item label { display: block; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.bi-item input { width: 100%; padding: 8px 8px; font-size: 14px; font-weight: 700; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); outline: none; text-align: center; }
+.bi-item input:focus { border-color: var(--accent); }
+
+/* Tier 3 warning */
+.tier3-banner { background: #FEF2F2; border: 1px solid var(--red); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--red); margin-bottom: 12px; line-height: 1.5; }
+
+/* 2-col row */
+.bill-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* Appliance donut */
+.appliance-chart-wrap { position: relative; height: 160px; margin: 8px 0; }
+.appliance-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.al-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.al-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+/* Timeline bar chart replacing heatmap */
+.timeline-chart-wrap { position: relative; height: 140px; margin: 8px 0 0; }
+.timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 2px;
+  margin-bottom: 6px;
+}
+.heatmap-note { font-size: 12px; color: var(--muted); margin-top: 6px; padding: 6px 10px; background: var(--card-alt); border-radius: 7px; }
+
+/* Tariff bar — compact */
+.tariff-bar-wrap { margin: 8px 0 6px; }
+.tariff-track { position: relative; height: 12px; background: #E2E8F0; border-radius: 6px; overflow: visible; margin-bottom: 5px; }
+.tariff-fill { height: 100%; border-radius: 6px; background: var(--green); transition: width 0.5s ease, background 0.4s; }
+.tariff-marker { position: absolute; top: -5px; transform: translateX(-50%); transition: left 0.5s ease; }
+.tariff-marker::after { content: '▼'; font-size: 12px; color: var(--text); display: block; text-align: center; }
+.tariff-marker-label { font-size: 10px; font-weight: 700; color: var(--text); text-align: center; white-space: nowrap; margin-bottom: 1px; }
+.tariff-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+.tariff-slabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+.tslab { border-radius: 5px; padding: 5px 6px; font-size: 10px; font-weight: 700; }
+.tslab span { font-size: 9px; font-weight: 400; display: block; margin-top: 1px; }
+.green-slab { background: var(--green-light); color: var(--green-dark); }
+.amber-slab { background: var(--amber-light); color: var(--amber); }
+.red-slab   { background: var(--red-light); color: var(--red); }
+.tariff-status { font-size: 12px; color: var(--muted); margin-top: 6px; padding: 6px 10px; background: var(--card-alt); border-radius: 7px; }
+
+/* Estimated bill section */
+.est-section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-top: 14px; }
+.est-section-label { font-size: 12px; font-weight: 700; color: var(--text); }
+.est-compare-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.est-card { background: var(--card-alt); border-radius: 10px; padding: 10px 14px; flex: 1; min-width: 100px; }
+.est-card-real { border: 1px solid var(--border); }
+.est-card-est { border: 1px solid var(--blue); background: var(--blue-light); }
+.est-card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.est-card-val { font-size: 22px; font-weight: 900; color: var(--text); }
+.est-card-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.est-vs { font-size: 14px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.est-diff-card { flex: 1.2; background: var(--card-alt); border-radius: 10px; padding: 10px 14px; border: 1px solid var(--border); }
+.est-diff-val { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
+.est-diff-sub { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* Government sustainability response */
+.govt-response-card { background: #F0FDF4; border: 1px solid var(--green); border-radius: 12px; padding: 1.25rem; margin-top: 14px; }
+.gr-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.gr-logo { font-size: 13px; font-weight: 700; color: var(--green-dark); }
+.gr-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: var(--green); color: #fff; }
+.gr-badge.amber-badge { background: var(--amber); }
+.gr-badge.red-badge { background: var(--red); }
+.gr-message { font-size: 13px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+.gr-tips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.gr-tip-pill { background: #fff; border: 1px solid var(--green); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--green-dark); font-weight: 600; }
+.gr-action { background: #fff; border: 1px solid var(--green); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.gr-action-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; letter-spacing: 0.06em; }
+.gr-action-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.gr-action-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.gr-action-saving { font-size: 20px; font-weight: 900; color: var(--green-dark); text-align: right; flex-shrink: 0; white-space: nowrap; }
+
+/* Sustainability score + carbon — kept from before, used in renderBill */
+.score-panel { display: flex; flex-direction: column; align-items: center; }
+.gauge-wrap { width: 100%; max-width: 200px; margin: 0 auto; }
+.gauge-svg { width: 100%; }
+.gauge-label { font-size: 14px; font-weight: 700; margin-top: 4px; color: var(--accent); text-align: center; }
+.score-factors { width: 100%; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.sf-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.sf-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sf-green { background: var(--green); } .sf-amber { background: var(--amber); } .sf-red { background: var(--red); }
+.carbon-main { text-align: center; margin: 12px 0 16px; }
+.carbon-big { font-size: 28px; font-weight: 900; color: var(--text); }
+.carbon-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.carbon-equiv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.carbon-card { background: var(--card-alt); border-radius: 10px; padding: 12px 8px; text-align: center; }
+.cc-icon { font-size: 24px; margin-bottom: 6px; }
+.cc-val { font-size: 15px; font-weight: 800; color: var(--text); }
+.cc-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+.carbon-grid-note { font-size: 12px; color: var(--green-dark); background: var(--green-light); padding: 8px 12px; border-radius: 8px; margin-top: 10px; }
+.best-action-card { background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%); border: 1px solid var(--green); border-radius: 14px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; }
+.ba-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); margin-bottom: 6px; }
+.ba-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.ba-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+.ba-right { text-align: right; flex-shrink: 0; }
+.ba-saving-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.ba-saving { font-size: 32px; font-weight: 900; color: var(--green-dark); }
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .two-col, .pillars-row, .roadmap { grid-template-columns: 1fr; }
+  .bill-row-2, .bill-inputs-strip { grid-template-columns: 1fr 1fr; }
+  .carbon-equiv-grid { grid-template-columns: repeat(3,1fr); }
+  .best-action-card { flex-direction: column; }
+  .intro-grid, .stat-row, .info-stat-row { grid-template-columns: 1fr; }
+  .intro-hero h1 { font-size: 30px; }
+  .mini-stats { grid-template-columns: 1fr 1fr; }
+  .page-nav { flex-direction: column; gap: 10px; }
+  .roadmap::before { display: none; }
+  .bill-header-card { flex-direction: column; gap: 1rem; text-align: center; }
+  .bill-header-right { text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar" class="hidden">
+  <div class="nav-logo">GridGuard <span>Energy Simulator</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab" onclick="showPage('intro')">Welcome</button>
+    <button class="nav-tab" onclick="showPage('simulate')">Simulate</button>
+    <button class="nav-tab" onclick="showPage('scenarios')">Saved Scenarios</button>
+    <button class="nav-tab" onclick="showPage('bill')">💡 My Bill</button>
+    <button class="nav-tab" onclick="showPage('info')">Info</button>
+  </div>
+  <div class="nav-right">
+    <span id="user-greeting" class="user-greeting"></span>
+    <button class="btn-ghost" style="padding:6px 14px;font-size:13px" onclick="logout()">Log out</button>
+  </div>
+</nav>
+
+<!-- PAGE 0: LANDING -->
+<div id="page-landing" class="page active auth-page">
+  <div class="landing-card">
+    <div class="auth-logo">GridGuard</div>
+    <h1 class="landing-title">Neighborhood Energy Simulator</h1>
+    <p class="landing-sub">Test whether a neighborhood's electricity grid can survive a real-world energy crisis, before it actually happens. Free, browser-based, and built for the renewable energy transition.</p>
+    <button class="btn-primary btn-full btn-large" onclick="showPage('register')">Get started</button>
+    <p class="auth-switch">Already have an account? <a onclick="showPage('login')">Log in</a></p>
+  </div>
+</div>
+
+<!-- PAGE 1: REGISTER -->
+<div id="page-register" class="page auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">GridGuard</div>
+    <h1 class="auth-title">Create account</h1>
+    <p class="auth-sub">Join GridGuard and start simulating.</p>
+    <div class="form-group"><label>Name</label><input type="text" id="reg-name" placeholder="Your name"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="you@example.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="At least 6 characters"></div>
+    <div id="register-error" class="form-error"></div>
+    <button class="btn-primary btn-full" onclick="handleRegister()">Create account</button>
+    <p class="auth-switch">Already have an account? <a onclick="showPage('login')">Log in</a></p>
+    <p class="auth-switch"><a onclick="showPage('landing')">Back</a></p>
+  </div>
+</div>
+
+<!-- PAGE 2: LOGIN -->
+<div id="page-login" class="page auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">GridGuard</div>
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-sub">Log in to continue to your dashboard.</p>
+    <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="Your password"></div>
+    <div id="login-error" class="form-error"></div>
+    <button class="btn-primary btn-full" onclick="handleLogin()">Log in</button>
+    <button class="btn-ghost btn-full" style="margin-top:10px" onclick="quickDemoLogin()">Use demo account</button>
+    <p class="auth-switch">No account? <a onclick="showPage('register')">Sign up</a></p>
+    <p class="auth-switch"><a onclick="showPage('landing')">Back</a></p>
+  </div>
+</div>
+
+<!-- PAGE 3: INTRO -->
+<div id="page-intro" class="page">
+  <div class="intro-hero">
+    <div class="hero-tag">Future Tech Innovation · Sustainability</div>
+    <h1>Welcome to <em>GridGuard</em></h1>
+    <p class="intro-lead">A free, browser-based tool that lets you test whether a neighborhood's electricity grid can survive a real-world energy crisis, before it actually happens.</p>
+  </div>
+  <div class="intro-grid">
+    <div class="intro-card"><div class="intro-icon">☀️</div><h3>Configure a neighborhood</h3><p>Set how many solar panels, wind turbines, and electric vehicles your neighborhood has using simple sliders.</p></div>
+    <div class="intro-card"><div class="intro-icon">⚡</div><h3>Trigger a stress event</h3><p>Simulate real situations like a solar noon surge, an EV rush hour, or a sudden drop in wind.</p></div>
+    <div class="intro-card"><div class="intro-icon">📊</div><h3>See the result instantly</h3><p>Watch the grid respond live: supply, load, and an overload risk score, color-coded for clarity.</p></div>
+  </div>
+  <div class="intro-cta">
+    <button class="btn-primary btn-large" onclick="showPage('simulate')">Get started →</button>
+  </div>
+</div>
+
+<!-- PAGE 4: SIMULATE -->
+<div id="page-simulate" class="page">
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="big" id="qs-supply">0</div><div class="lbl">kW supply coming in</div></div>
+    <div class="stat-card"><div class="big" id="qs-load">0</div><div class="lbl">kW load going out</div></div>
+    <div class="stat-card"><div class="big" id="qs-risk">0%</div><div class="lbl">overload risk</div></div>
+  </div>
+
+  <div class="two-col">
+    <!-- LEFT: controls -->
+    <div>
+      <div class="panel" style="margin-bottom:16px">
+        <div class="panel-title">Configure your neighborhood</div>
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="slider-label"><div class="slider-icon icon-green">☀️</div> Solar panels</div>
+            <div class="slider-val" id="v-panels">80</div>
+          </div>
+          <div class="slider-desc">Each panel generates ~0.3 kW at full sun</div>
+          <input type="range" min="0" max="300" step="1" value="80" id="s-panels" oninput="updateSlider('panels', this.value)">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="slider-label"><div class="slider-icon icon-blue">💨</div> Wind turbines</div>
+            <div class="slider-val" id="v-turbines">3</div>
+          </div>
+          <div class="slider-desc">Each turbine generates ~2 kW average</div>
+          <input type="range" min="0" max="10" step="1" value="3" id="s-turbines" oninput="updateSlider('turbines', this.value)">
+        </div>
+        <div class="slider-group">
+          <div class="slider-header">
+            <div class="slider-label"><div class="slider-icon icon-amber">🚗</div> Electric vehicles</div>
+            <div class="slider-val" id="v-evs">40</div>
+          </div>
+          <div class="slider-desc">Each EV draws ~1.5 kW when charging</div>
+          <input type="range" min="0" max="200" step="1" value="40" id="s-evs" oninput="updateSlider('evs', this.value)">
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Trigger a stress event</div>
+        <div class="event-grid">
+          <div class="evt-btn" id="eb-normal" onclick="triggerEvent('normal')">
+            <span class="eicon">🌤</span><span class="ename">Normal day</span>
+            <span class="edesc">Standard usage, no surprises</span>
+            <span class="evt-badge badge-neutral">Baseline</span>
+          </div>
+          <div class="evt-btn" id="eb-solar" onclick="triggerEvent('solar')">
+            <span class="eicon">🌞</span><span class="ename">Solar noon surge</span>
+            <span class="edesc">Panels produce 2x output</span>
+            <span class="evt-badge badge-warn">Supply spikes</span>
+          </div>
+          <div class="evt-btn" id="eb-ev" onclick="triggerEvent('ev')">
+            <span class="eicon">⚡</span><span class="ename">EV rush hour</span>
+            <span class="edesc">All EVs charging at once</span>
+            <span class="evt-badge badge-danger">Demand x3</span>
+          </div>
+          <div class="evt-btn" id="eb-wind" onclick="triggerEvent('wind')">
+            <span class="eicon">🌬</span><span class="ename">Wind drops 80%</span>
+            <span class="edesc">Turbines slow to near stop</span>
+            <span class="evt-badge badge-danger">Supply drops</span>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn-primary btn-full" onclick="saveScenario()">Save this scenario →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: result + bill accordion -->
+    <div>
+      <div class="result-main state-green" id="result-main">
+        <div class="result-top">
+          <div>
+            <div class="result-risk state-green" id="result-risk">0<sub>%</sub></div>
+            <div class="result-label">overload risk</div>
+          </div>
+          <div style="text-align:right">
+            <div class="ml-label">ML prediction</div>
+            <div class="ml-conf" id="ml-conf">Low risk</div>
+            <div class="ml-sub" id="ml-sub">Grid is healthy</div>
+          </div>
+        </div>
+        <div class="result-alert state-green" id="result-alert">
+          <div class="result-alert-title state-green" id="alert-title">Grid stable</div>
+          <div class="result-alert-body" id="alert-body">Supply exceeds demand. Everything is fine.</div>
+        </div>
+        <div class="mini-stats">
+          <div class="mini-stat"><div class="ms-val" id="ms-supply">0</div><div class="ms-lbl">kW supply</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ms-load">0</div><div class="ms-lbl">kW load</div></div>
+          <div class="mini-stat"><div class="ms-val" id="ms-balance">0</div><div class="ms-lbl">kW balance</div></div>
+        </div>
+        <div class="bar-section">
+          <div class="bar-row"><span class="bar-label-supply">☀️ Supply</span><span id="bar-supply-pct">0%</span></div>
+          <div class="bar-bg"><div class="bar-fill bar-supply" id="bar-supply" style="width:0%"></div></div>
+          <div class="bar-row"><span class="bar-label-load">⚡ Load</span><span id="bar-load-pct">0%</span></div>
+          <div class="bar-bg"><div class="bar-fill bar-load" id="bar-load" style="width:0%"></div></div>
+        </div>
+        <div class="panel-title" style="margin-bottom:8px">Grid load over time</div>
+        <div class="chart-wrap"><canvas id="gridChart"></canvas></div>
+      </div><!-- end result-main -->
+    </div><!-- end right col -->
+  </div><!-- end two-col -->
+</div><!-- end page-simulate -->
+
+<!-- PAGE 5: MY BILL -->
+<div id="page-bill" class="page">
+
+  <!-- ══ SECTION 1: YOUR GOVERNMENT BILL ══════════════════════ -->
+
+  <!-- Bill header — official look -->
+  <div class="bill-header-card">
+    <div class="bill-header-left">
+      <div class="bill-utility-logo">⚡ Saudi Electricity Company</div>
+      <div class="bill-period">Monthly Statement · <span id="bh-month">June 2026</span></div>
+      <div class="bill-account">Account: <span id="bh-name">Demo User</span> &nbsp;·&nbsp; Residential Tariff</div>
+    </div>
+    <div class="bill-header-right">
+      <div class="bill-amount-label">Amount Due</div>
+      <div class="bill-amount" id="bh-amount">SAR 54.00</div>
+      <div class="bill-kwh-tag" id="bh-kwh">300 kWh this month</div>
+    </div>
+  </div>
+
+  <!-- Enter your real bill numbers -->
+  <div class="bill-inputs-card">
+    <div class="panel-title">Enter your government bill</div>
+    <div class="bill-inputs-strip" style="grid-template-columns:repeat(2,1fr);max-width:420px">
+      <div class="bi-item">
+        <label>Total kWh on your bill</label>
+        <input type="number" id="bill-kwh" value="300" min="50" max="6000" oninput="renderBill()">
+      </div>
+      <div class="bi-item">
+        <label>Amount charged (SAR)</label>
+        <input type="number" id="bill-actual-sar" value="54" min="0" max="5000" step="0.01" oninput="renderBill()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Tier warning banner (only shown in Tier 3) -->
+  <div id="tier3-warning" class="tier3-banner hidden">
+    ⚠️ <strong>Government Notice:</strong> Your usage is in <strong>Tier 3</strong> — the highest pricing band. SEC may issue a formal energy audit request for households above 2000 kWh/month.
+  </div>
+
+  <!-- Appliance breakdown + time heatmap side by side -->
+  <div class="bill-row-2" style="margin-top:16px">
+
+    <!-- Appliance donut chart -->
+    <div class="panel">
+      <div class="panel-title">Where your electricity went</div>
+      <div class="appliance-chart-wrap">
+        <canvas id="applianceChart"></canvas>
+      </div>
+      <div class="appliance-legend" id="appliance-legend"></div>
+    </div>
+
+    <!-- Time-of-day timeline chart -->
+    <div class="panel">
+      <div class="panel-title">When you use the most power</div>
+      <div class="timeline-chart-wrap">
+        <canvas id="timelineChart"></canvas>
+      </div>
+      <div class="timeline-labels">
+        <span>12am</span><span>3am</span><span>6am</span><span>9am</span>
+        <span>12pm</span><span>3pm</span><span>6pm</span><span>9pm</span><span>11pm</span>
+      </div>
+      <div class="heatmap-note" id="heatmap-peak-note"></div>
+    </div>
+
+  </div>
+
+  <!-- Tariff band bar — compact, sits under the charts -->
+  <div class="panel" style="margin-top:16px">
+    <div class="panel-title">Your pricing band</div>
+    <div class="tariff-bar-wrap">
+      <div class="tariff-track">
+        <div class="tariff-fill" id="tariff-fill" style="width:10%"></div>
+        <div class="tariff-marker" id="tariff-marker" style="left:10%">
+          <div class="tariff-marker-label" id="tariff-marker-label">300</div>
+        </div>
+      </div>
+      <div class="tariff-labels">
+        <span>0</span><span>2000 kWh</span><span>4000 kWh</span><span>6000+</span>
+      </div>
+      <div class="tariff-slabs">
+        <div class="tslab green-slab">Tier 1 · 0–2000 kWh<br><span>0.18 SAR/kWh</span></div>
+        <div class="tslab amber-slab">Tier 2 · 2001–4000 kWh<br><span>0.26 SAR/kWh</span></div>
+        <div class="tslab red-slab">Tier 3 · 4001+ kWh<br><span>0.32 SAR/kWh</span></div>
+      </div>
+    </div>
+    <div class="tariff-status" id="tariff-status">You are in <strong>Tier 1</strong></div>
+  </div>
+
+  <!-- ══ SECTION 2: ESTIMATED BILL ════════════════════════════ -->
+  <div class="est-section">
+    <div class="est-section-label">📊 Estimated bill based on your household</div>
+
+    <div class="bill-inputs-strip" style="margin-top:10px">
+      <div class="bi-item">
+        <label>People</label>
+        <input type="number" id="bill-people" value="4" min="1" max="12" oninput="renderBill()">
+      </div>
+      <div class="bi-item">
+        <label>Solar panels</label>
+        <input type="number" id="bill-panels" value="0" min="0" max="50" oninput="renderBill()">
+      </div>
+      <div class="bi-item">
+        <label>EVs at home</label>
+        <input type="number" id="bill-ev-count" value="0" min="0" max="5" oninput="renderBill()">
+      </div>
+      <div class="bi-item">
+        <label>Rate (SAR/kWh)</label>
+        <input type="number" id="bill-rate" value="0.18" min="0.01" max="2" step="0.01" oninput="renderBill()">
+      </div>
+    </div>
+
+    <!-- Comparison: estimated vs real -->
+    <div class="est-compare-row">
+      <div class="est-card est-card-real">
+        <div class="est-card-label">Your real bill</div>
+        <div class="est-card-val" id="est-real">SAR 54</div>
+        <div class="est-card-sub" id="est-real-kwh">300 kWh</div>
+      </div>
+      <div class="est-vs">vs</div>
+      <div class="est-card est-card-est">
+        <div class="est-card-label">Your estimated bill</div>
+        <div class="est-card-val" id="est-calc">SAR 54</div>
+        <div class="est-card-sub" id="est-calc-kwh">avg for your household</div>
+      </div>
+      <div class="est-diff-card" id="est-diff-card">
+        <div class="est-diff-val" id="est-diff-val">On target</div>
+        <div class="est-diff-sub" id="est-diff-sub">Your usage matches expectations</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 3: GOVERNMENT SUSTAINABILITY RESPONSE ════════ -->
+  <div class="govt-response-card" id="govt-response-card">
+    <div class="gr-header">
+      <div class="gr-logo">🏛️ SEC Sustainability Office</div>
+      <div class="gr-badge" id="gr-badge">Green Household</div>
+    </div>
+    <div class="gr-message" id="gr-message">Your household is performing well.</div>
+    <div class="gr-tips" id="gr-tips"></div>
+    <!-- Best action -->
+    <div class="gr-action" id="gr-action">
+      <div class="gr-action-left">
+        <div class="gr-action-tag">Recommended action this month</div>
+        <div class="gr-action-title" id="gr-action-title">Keep it up</div>
+        <div class="gr-action-desc" id="gr-action-desc"></div>
+      </div>
+      <div class="gr-action-saving" id="gr-action-saving">SAR 0 saved</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE 6: SCENARIOS -->
+<div id="page-scenarios" class="page">
+  <div class="section-title">Saved scenarios</div>
+  <div class="section-sub">Compare configurations to find the safest setup for your neighborhood.</div>
+  <div id="scenarios-container">
+    <div class="scenario-empty">
+      <div class="big-icon">📋</div>
+      <div class="empty-title">No scenarios saved yet</div>
+      <div class="empty-sub">Run a simulation and press "Save this scenario" to compare results here.</div>
+    </div>
+  </div>
+  <div class="page-nav">
+    <button class="btn-ghost" onclick="showPage('simulate')">Back to simulation</button>
+    <button class="btn-primary" onclick="showPage('info')">Next: Info →</button>
+  </div>
+</div>
+
+<!-- PAGE 6: INFO (About + Tips + Govt — all in one, tab-switched) -->
+<div id="page-info" class="page">
+  <div class="section-title">📚 GridGuard Info</div>
+  <div class="section-sub">Everything you need to know, from how it works to global impact.</div>
+
+  <!-- Three sub-tabs -->
+  <div class="info-tabs">
+    <button class="info-tab-btn active" onclick="showInfoTab('about', this)">⚙️ How it Works</button>
+    <button class="info-tab-btn" onclick="showInfoTab('tips', this)">🌱 Sustainability Tips</button>
+    <button class="info-tab-btn" onclick="showInfoTab('govt', this)">🏛️ Government Initiative</button>
+  </div>
+
+  <!-- SUB-SECTION: HOW IT WORKS (About) -->
+  <div id="info-about" class="info-section active">
+
+    <div class="info-stat-row">
+      <div class="info-stat-card"><div class="big">350 kW</div><div class="lbl">max grid capacity in this simulation</div></div>
+      <div class="info-stat-card"><div class="big">6 lines</div><div class="lbl">of math power the entire engine</div></div>
+      <div class="info-stat-card"><div class="big">4 states</div><div class="lbl">green, amber, red, and blue outcomes</div></div>
+    </div>
+
+    <div class="acc-group">
+      <div class="acc-item" id="acc-problem">
+        <div class="acc-head" onclick="toggleAcc('acc-problem')">
+          <div class="acc-head-left"><span class="acc-head-icon">⚡</span><span class="acc-head-title">The problem GridGuard solves</span></div>
+          <span class="acc-head-arrow">▼</span>
+        </div>
+        <div class="acc-body" id="acc-problem-body">
+          <div class="acc-body-inner">Cities around the world are adding solar panels and electric vehicles at record speed. This creates a hidden challenge: supply and demand on the grid must stay roughly balanced at all times. Too much demand causes blackouts. Too much supply causes overgeneration, a real issue that forced California to shut down solar farms at midday because the grid could not absorb the excess. Professional tools to test this cost thousands of dollars. GridGuard does it for free, in a browser, in under a minute.</div>
+        </div>
+      </div>
+
+      <div class="acc-item" id="acc-math">
+        <div class="acc-head" onclick="toggleAcc('acc-math')">
+          <div class="acc-head-left"><span class="acc-head-icon">🔢</span><span class="acc-head-title">The math behind the simulation</span></div>
+          <span class="acc-head-arrow">▼</span>
+        </div>
+        <div class="acc-body" id="acc-math-body">
+          <div class="acc-body-inner">
+            Supply = (panels × 0.3 × solar multiplier) + (turbines × 2 × wind multiplier)<br>
+            EV load = EVs × 1.5 × EV multiplier<br>
+            Total load = 60 kW base household use + EV load<br>
+            Balance = supply minus load<br>
+            Risk = if balance is negative, how severe is the deficit as a percentage of grid capacity<br><br>
+            Event buttons change the multipliers. EV rush hour sets EV multiplier to 3. Solar noon sets solar multiplier to 2. Wind drop sets wind multiplier to 0.2.
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-item" id="acc-colors">
+        <div class="acc-head" onclick="toggleAcc('acc-colors')">
+          <div class="acc-head-left"><span class="acc-head-icon">🎨</span><span class="acc-head-title">What the four colors mean</span></div>
+          <span class="acc-head-arrow">▼</span>
+        </div>
+        <div class="acc-body" id="acc-colors-body">
+          <div class="acc-body-inner">
+            🟢 <strong>Green: Stable.</strong> Supply exceeds load. No action needed.<br><br>
+            🟡 <strong>Amber: Stressed.</strong> Load slightly exceeds supply. The grid is coping but fragile. One more EV could tip it over.<br><br>
+            🔴 <strong>Red: Overload.</strong> Load significantly exceeds supply. In a real grid this causes voltage drops and blackouts.<br><br>
+            🔵 <strong>Blue: Overgeneration.</strong> Supply is far more than load. Real grids must dump or export excess power or risk equipment damage. Too much is also a problem.
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-item" id="acc-innovation">
+        <div class="acc-head" onclick="toggleAcc('acc-innovation')">
+          <div class="acc-head-left"><span class="acc-head-icon">🚀</span><span class="acc-head-title">Why GridGuard is innovative</span></div>
+          <span class="acc-head-arrow">▼</span>
+        </div>
+        <div class="acc-body" id="acc-innovation-body">
+          <div class="acc-body-inner">Google Maps did not invent navigation. It made navigation free for everyone. Canva did not invent graphic design. It made design free for non-designers. GridGuard did not invent grid simulation. It makes grid simulation free for students, city planners, and citizens. A tool like GridGuard already exists for engineers and costs thousands of dollars. GridGuard puts it in a browser, for free, with no engineering degree required.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB-SECTION: SUSTAINABILITY TIPS -->
+  <div id="info-tips" class="info-section">
+
+    <div class="info-stat-row">
+      <div class="info-stat-card"><div class="big">~30%</div><div class="lbl">of a home's bill in hot countries comes from AC alone</div></div>
+      <div class="info-stat-card"><div class="big">2 hrs</div><div class="lbl">shifting EV charging from 6pm to midnight cuts grid impact by up to 60%</div></div>
+      <div class="info-stat-card"><div class="big">600 kg</div><div class="lbl">CO₂ avoided per year by installing just 6 solar panels</div></div>
+    </div>
+
+    <div class="sub-label">🏠 Energy at Home</div>
+    <div class="acc-group">
+      <div class="acc-item" id="t-ac">
+        <div class="acc-head" onclick="toggleAcc('t-ac')">
+          <div class="acc-head-left"><span class="acc-head-icon">🌡️</span><span class="acc-head-title">Adjust your thermostat by 2°C</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-green">High impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-ac-body">
+          <div class="acc-body-inner">Set your AC to 22°C instead of 20°C. In the GCC region, every degree saved reduces your cooling load by roughly 6%. This is the single biggest lever most households have and requires no equipment purchase.</div>
+        </div>
+      </div>
+      <div class="acc-item" id="t-offpeak">
+        <div class="acc-head" onclick="toggleAcc('t-offpeak')">
+          <div class="acc-head-left"><span class="acc-head-icon">🕐</span><span class="acc-head-title">Run appliances at off-peak times</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-green">High impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-offpeak-body">
+          <div class="acc-body-inner">Washing machines, dishwashers, and dryers create significant load. Running them after 9pm or before 7am avoids morning and evening demand peaks when the grid is most stressed. This is exactly the kind of behavior shift GridGuard is designed to make visible.</div>
+        </div>
+      </div>
+      <div class="acc-item" id="t-led">
+        <div class="acc-head" onclick="toggleAcc('t-led')">
+          <div class="acc-head-left"><span class="acc-head-icon">💡</span><span class="acc-head-title">Replace all bulbs with LED</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-amber">Medium impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-led-body">
+          <div class="acc-body-inner">LED bulbs use 75% less energy than traditional bulbs and last 25 times longer. For a 4-person household switching 20 bulbs, you can save 30 to 50 kWh per month with a one-time purchase cost under SAR 200.</div>
+        </div>
+      </div>
+      <div class="acc-item" id="t-standby">
+        <div class="acc-head" onclick="toggleAcc('t-standby')">
+          <div class="acc-head-left"><span class="acc-head-icon">🔌</span><span class="acc-head-title">Kill standby power</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-blue">Low impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-standby-body">
+          <div class="acc-body-inner">Devices on standby, including TVs, gaming consoles, and phone chargers left plugged in, silently consume 5 to 10% of your electricity. Smart power strips automatically cut standby drain without any daily effort needed.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-label">🚗 Electric Vehicles</div>
+    <div class="acc-group">
+      <div class="acc-item" id="t-evnight">
+        <div class="acc-head" onclick="toggleAcc('t-evnight')">
+          <div class="acc-head-left"><span class="acc-head-icon">🌙</span><span class="acc-head-title">Charge your EV overnight, not after work</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-green">High impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-evnight-body">
+          <div class="acc-body-inner">If millions of EV owners plug in at 6pm when they get home, they create a massive simultaneous demand spike, exactly when the the grid is already under pressure from cooking and lighting. Overnight charging between 11pm and 6am avoids this completely and is usually cheaper due to off-peak rates.</div>
+        </div>
+      </div>
+      <div class="acc-item" id="t-evsolar">
+        <div class="acc-head" onclick="toggleAcc('t-evsolar')">
+          <div class="acc-head-left"><span class="acc-head-icon">☀️</span><span class="acc-head-title">Charge from solar when available</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-green">High impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-evsolar-body">
+          <div class="acc-body-inner">If you have solar panels, schedule EV charging during peak solar hours (10am to 2pm) when your panels generate the most power. This uses energy that would otherwise be exported to the grid or go unused, making your EV effectively free to run on sunny days.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-label">🤝 Community Action</div>
+    <div class="acc-group">
+      <div class="acc-item" id="t-community">
+        <div class="acc-head" onclick="toggleAcc('t-community')">
+          <div class="acc-head-left"><span class="acc-head-icon">🏘️</span><span class="acc-head-title">Propose a neighborhood solar scheme</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-green">High impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-community-body">
+          <div class="acc-body-inner">Community solar projects allow buildings that cannot install their own panels, such as apartments or rental properties, to share the output of a shared installation. One shared rooftop can offset energy costs for an entire floor of a building and qualifies for collective subsidies unavailable to individual homeowners.</div>
+        </div>
+      </div>
+      <div class="acc-item" id="t-monitor">
+        <div class="acc-head" onclick="toggleAcc('t-monitor')">
+          <div class="acc-head-left"><span class="acc-head-icon">📱</span><span class="acc-head-title">Monitor your consumption with a smart app</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="acc-head-badge badge-amber">Medium impact</span><span class="acc-head-arrow">▼</span></div>
+        </div>
+        <div class="acc-body" id="t-monitor-body">
+          <div class="acc-body-inner">Apps connected to smart meters let you see your usage hour by hour. Awareness alone typically reduces consumption by 5 to 15% simply by surfacing waste you did not know existed. The same principle GridGuard uses to show grid state, applied to your own home.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUB-SECTION: GOVT INITIATIVE -->
+  <div id="info-govt" class="info-section">
+
+    <div class="govt-hero-strip">
+      <div class="govt-hero-emoji">🌍</div>
+      <div>
+        <h2>From hackathon demo to <em>national infrastructure</em></h2>
+        <p>Every government pursuing net-zero emissions faces the same problem: the public does not understand the grid, so they cannot participate in decisions about it. GridGuard bridges that gap by making real energy tradeoffs visible, interactive, and free for everyone.</p>
+      </div>
+    </div>
+
+    <div class="sub-label">Three pillars</div>
+    <div class="pillars-row">
+      <div class="pillar-card">
+        <div class="pillar-icon">🎓</div>
+        <div class="pillar-tag">Pillar 01</div>
+        <div class="pillar-title">Education Integration</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Free teaching tool embedded into science and civics curricula from Grade 9 upward.</div>
+        <div class="pillar-tags">
+          <span class="ptag">Ministry integration</span><span class="ptag">Teacher training</span><span class="ptag">Student competitions</span><span class="ptag">Localized data</span>
+        </div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">🏙️</div>
+        <div class="pillar-tag">Pillar 02</div>
+        <div class="pillar-title">Urban Planning Tool</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">Grid impact assessments built into municipal planning approvals for new housing developments.</div>
+        <div class="pillar-tags">
+          <span class="ptag">Planning portals</span><span class="ptag">City APIs</span><span class="ptag">Live grid data</span><span class="ptag">Mandatory review</span>
+        </div>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-icon">📊</div>
+        <div class="pillar-tag">Pillar 03</div>
+        <div class="pillar-title">Public Dashboard</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:10px">A live national URL showing citizens the real-time state of their grid, as readable as a weather forecast.</div>
+        <div class="pillar-tags">
+          <span class="ptag">Hourly updates</span><span class="ptag">Push alerts</span><span class="ptag">Open data API</span><span class="ptag">Public access</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sub-label">Rollout roadmap</div>
+    <div class="roadmap">
+      <div class="roadmap-step">
+        <div class="roadmap-dot">🌱</div>
+        <div class="roadmap-phase">Phase 1 · Months 1 to 6</div>
+        <div class="roadmap-title">Pilot: 3 cities, 10 schools</div>
+        <div class="roadmap-body">Riyadh, Jeddah, and NEOM. Partner with SEC for open data.</div>
+      </div>
+      <div class="roadmap-step">
+        <div class="roadmap-dot">📡</div>
+        <div class="roadmap-phase">Phase 2 · Months 7 to 18</div>
+        <div class="roadmap-title">National rollout + live data</div>
+        <div class="roadmap-body">All schools nationwide. Public dashboard goes live. Municipal API access opens.</div>
+      </div>
+      <div class="roadmap-step">
+        <div class="roadmap-dot">🏙️</div>
+        <div class="roadmap-phase">Phase 3 · Months 19 to 30</div>
+        <div class="roadmap-title">Urban planning + GCC expansion</div>
+        <div class="roadmap-body">Mandatory grid assessments for new developments. Bilateral agreements with UAE, Kuwait, Bahrain.</div>
+      </div>
+      <div class="roadmap-step">
+        <div class="roadmap-dot">🌍</div>
+        <div class="roadmap-phase">Phase 4 · Months 31 to 36</div>
+        <div class="roadmap-title">Open-source global release</div>
+        <div class="roadmap-body">Full open-source under Creative Commons. Presented to UNEP. Free to any country pursuing net-zero.</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sub-label">UN SDG alignment</div>
+    <div class="sdg-row">
+      <div class="sdg-chip">
+        <div class="sdg-num">4</div>
+        <div class="sdg-text"><strong>Quality Education</strong><span>Free energy literacy tools in every school</span></div>
+      </div>
+      <div class="sdg-chip">
+        <div class="sdg-num">7</div>
+        <div class="sdg-text"><strong>Clean Energy</strong><span>Supports renewable planning and efficiency</span></div>
+      </div>
+      <div class="sdg-chip">
+        <div class="sdg-num">11</div>
+        <div class="sdg-text"><strong>Sustainable Cities</strong><span>Grid resilience built into urban development</span></div>
+      </div>
+      <div class="sdg-chip">
+        <div class="sdg-num">13</div>
+        <div class="sdg-text"><strong>Climate Action</strong><span>Public understanding accelerates political will</span></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sub-label">Countries that already do this</div>
+    <div class="countries-row">
+      <div class="country-pill"><span class="flag">🇩🇪</span><div><div class="cname">Germany</div><div class="cdesc">Fraunhofer ISE Energy Charts, real-time public generation data viewed by millions</div></div></div>
+      <div class="country-pill"><span class="flag">🇬🇧</span><div><div class="cname">United Kingdom</div><div class="cdesc">National Grid ESO free open API for real-time carbon intensity</div></div></div>
+      <div class="country-pill"><span class="flag">🇸🇪</span><div><div class="cname">Sweden</div><div class="cdesc">Energimyndigheten interactive public energy flow tools</div></div></div>
+      <div class="country-pill"><span class="flag">🇸🇦</span><div><div class="cname">Saudi Arabia</div><div class="cdesc">Vision 2030 targets 50% renewable energy and prioritizes digital public services</div></div></div>
+      <div class="country-pill"><span class="flag">🇳🇱</span><div><div class="cname">Netherlands</div><div class="cdesc">Klimaatakkoord mandates public energy literacy campaigns and citizen tools</div></div></div>
+      <div class="country-pill"><span class="flag">🇸🇬</span><div><div class="cname">Singapore</div><div class="cdesc">GreenPrint includes citizen energy dashboards and school STEM grid integration</div></div></div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// API CONFIG
+// All requests go to the Express backend running on port 3000.
+// The JWT token is stored in localStorage so the user stays
+// logged in across page refreshes.
+// ═══════════════════════════════════════════════════════════════
+const API = 'http://localhost:3000/api';
+
+function getToken() {
+  return localStorage.getItem('gg_token');
+}
+function saveToken(token) {
+  localStorage.setItem('gg_token', token);
+}
+function clearToken() {
+  localStorage.removeItem('gg_token');
+  localStorage.removeItem('gg_user');
+}
+function saveUser(user) {
+  localStorage.setItem('gg_user', JSON.stringify(user));
+}
+function getSavedUser() {
+  try { return JSON.parse(localStorage.getItem('gg_user')); } catch { return null; }
+}
+
+// Helper: make an authenticated API request
+// Automatically attaches the JWT token as a Bearer header
+async function apiFetch(path, options = {}) {
+  const token = getToken();
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(API + path, { ...options, headers });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'API error');
+  return data;
+}
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+
+let currentUser = null;
+
+// On page load: check if there's already a valid token in localStorage
+// If yes, skip login and go straight to the app
+async function checkExistingSession() {
+  const token = getToken();
+  const saved = getSavedUser();
+  if (!token || !saved) return;
+
+  try {
+    // Verify token is still valid with the server
+    await apiFetch('/auth/me');
+    currentUser = saved;
+    document.getElementById('user-greeting').textContent = 'Hi, ' + currentUser.name;
+    document.getElementById('navbar').classList.remove('hidden');
+    showPage('intro');
+  } catch {
+    // Token expired or invalid — clear it and show login
+    clearToken();
+  }
+}
+
+async function handleRegister() {
+  const name     = document.getElementById('reg-name').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const err      = document.getElementById('register-error');
+  err.textContent = '';
+
+  if (!name || !email || !password) { err.textContent = 'Please fill in all fields.'; return; }
+  if (password.length < 6) { err.textContent = 'Password must be at least 6 characters.'; return; }
+
+  try {
+    await apiFetch('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password })
+    });
+    showToast('Account created. Please log in.');
+    showPage('login');
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const err      = document.getElementById('login-error');
+  err.textContent = '';
+
+  if (!email || !password) { err.textContent = 'Please enter your email and password.'; return; }
+
+  try {
+    const data = await apiFetch('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+
+    // Store token and user info for future requests and page reloads
+    saveToken(data.token);
+    saveUser(data.user);
+    currentUser = data.user;
+
+    document.getElementById('user-greeting').textContent = 'Hi, ' + currentUser.name;
+    document.getElementById('navbar').classList.remove('hidden');
+    showPage('intro');
+    showToast('Welcome back, ' + currentUser.name + '!');
+  } catch (e) {
+    err.textContent = e.message;
+  }
+}
+
+async function quickDemoLogin() {
+  document.getElementById('login-email').value    = 'demo@gridguard.app';
+  document.getElementById('login-password').value = 'demo123';
+  await handleLogin();
+}
+
+function logout() {
+  currentUser = null;
+  clearToken();
+  document.getElementById('navbar').classList.add('hidden');
+  document.getElementById('login-email').value    = '';
+  document.getElementById('login-password').value = '';
+  showPage('login');
+}
+
+// STATE
+let state = { panels: 80, turbines: 3, evs: 40, evt: 'normal' };
+let solarMult = 1, windMult = 1, evMult = 1;
+const CAP = 350;
+
+// CALC
+function calc() {
+  const supply = Math.round((state.panels * 0.3 * solarMult) + (state.turbines * 2 * windMult));
+  const evLoad = Math.round(state.evs * 1.5 * evMult);
+  const load = 60 + evLoad;
+  const balance = supply - load;
+  const deficit = load - supply;
+  let risk = Math.round((deficit / CAP) * 100);
+  risk = Math.max(0, Math.min(100, risk));
+  const overgen = supply > load * 1.6;
+  let colorState;
+  if (overgen) colorState = 'blue';
+  else if (risk === 0) colorState = 'green';
+  else if (risk < 45) colorState = 'amber';
+  else colorState = 'red';
+  return { supply, load, balance, risk, colorState };
+}
+
+function updateScreen() {
+  const { supply, load, balance, risk, colorState } = calc();
+
+  document.getElementById('result-risk').textContent = risk + '%';
+  document.getElementById('result-risk').className = 'result-risk state-' + colorState;
+  document.getElementById('result-main').className = 'result-main state-' + colorState;
+  document.getElementById('result-alert').className = 'result-alert state-' + colorState;
+  document.getElementById('alert-title').className = 'result-alert-title state-' + colorState;
+
+  const sp = Math.min(100, Math.round((supply / CAP) * 100));
+  const lp = Math.min(100, Math.round((load / CAP) * 100));
+  document.getElementById('bar-supply').style.width = sp + '%';
+  document.getElementById('bar-load').style.width = lp + '%';
+  document.getElementById('bar-supply-pct').textContent = sp + '%';
+  document.getElementById('bar-load-pct').textContent = lp + '%';
+
+  document.getElementById('ms-supply').textContent = supply;
+  document.getElementById('ms-load').textContent = load;
+  document.getElementById('ms-balance').textContent = (balance >= 0 ? '+' : '') + balance;
+  document.getElementById('qs-supply').textContent = supply;
+  document.getElementById('qs-load').textContent = load;
+  document.getElementById('qs-risk').textContent = risk + '%';
+
+  const messages = {
+    green: ['Grid stable', 'Supply exceeds demand by ' + Math.abs(balance) + ' kW. Everything is fine.'],
+    amber: ['Grid under stress', 'Load is ' + Math.abs(balance) + ' kW over supply. Keep an eye on it.'],
+    red:   ['Overload: blackout risk', 'Critical deficit of ' + Math.abs(balance) + ' kW. This would cause a blackout.'],
+    blue:  ['Overgeneration warning', 'Supply is ' + Math.abs(balance) + ' kW more than needed. Excess must be exported.']
+  };
+  document.getElementById('alert-title').textContent = messages[colorState][0];
+  document.getElementById('alert-body').textContent = messages[colorState][1];
+
+  const ml = { green: ['Low risk','Grid is healthy'], amber: ['Medium risk','Monitor closely'], red: ['Critical','Immediate action'], blue: ['Overgen alert','Excess supply'] };
+  document.getElementById('ml-conf').textContent = ml[colorState][0];
+  document.getElementById('ml-sub').textContent = ml[colorState][1];
+
+  updateChart(supply, load);
+  return { supply, load, balance, risk, colorState };
+}
+
+function updateSlider(name, value) {
+  state[name] = Number(value);
+  document.getElementById('v-' + name).textContent = value;
+  updateScreen();
+}
+
+function triggerEvent(eventName) {
+  state.evt = eventName;
+  solarMult = 1; windMult = 1; evMult = 1;
+  if (eventName === 'solar') solarMult = 2;
+  if (eventName === 'ev') evMult = 3;
+  if (eventName === 'wind') windMult = 0.2;
+  ['normal','solar','ev','wind'].forEach(n => {
+    const b = document.getElementById('eb-' + n);
+    b.classList.toggle('active', n === eventName);
+  });
+  updateScreen();
+}
+
+// CHART
+let chart, chartSupplyData = [], chartLoadData = [];
+function initChart() {
+  chartSupplyData = Array(30).fill(0);
+  chartLoadData = Array(30).fill(0);
+  const ctx = document.getElementById('gridChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: Array(30).fill(''),
+      datasets: [
+        { label:'Supply', data: chartSupplyData, borderColor:'#16A34A', backgroundColor:'rgba(22,163,74,0.08)', borderWidth:2, pointRadius:0, tension:0.4, fill:true },
+        { label:'Load',   data: chartLoadData,   borderColor:'#DC2626', backgroundColor:'rgba(220,38,38,0.08)',  borderWidth:2, pointRadius:0, tension:0.4, fill:true }
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false, animation:{duration:300}, plugins:{legend:{display:false}},
+      scales: { x:{display:false}, y:{min:0, max:CAP, ticks:{color:'#64748B',maxTicksLimit:4}, grid:{color:'#E2E8F0'}} }
+    }
+  });
+}
+function updateChart(supply, load) {
+  chartSupplyData.push(supply + Math.round((Math.random()-0.5)*6));
+  chartLoadData.push(load + Math.round((Math.random()-0.5)*4));
+  if (chartSupplyData.length > 30) { chartSupplyData.shift(); chartLoadData.shift(); }
+  chart.update('none');
+}
+
+// SCENARIOS — backed by DynamoDB via the API
+let scenarios = [];
+
+async function saveScenario() {
+  const result = updateScreen();
+  const names  = { normal:'Normal day', solar:'Solar noon surge', ev:'EV rush hour', wind:'Wind drops 80%' };
+  try {
+    const data = await apiFetch('/scenarios', {
+      method: 'POST',
+      body: JSON.stringify({
+        panels: state.panels, turbines: state.turbines, evs: state.evs,
+        eventLabel: names[state.evt], supply: result.supply, load: result.load,
+        balance: result.balance, risk: result.risk, colorState: result.colorState
+      })
+    });
+    scenarios.unshift({ ...data.scenario, time: new Date().toLocaleTimeString() });
+    renderScenarios();
+    showToast('Scenario saved');
+    showPage('scenarios');
+  } catch (e) { showToast('Save failed: ' + e.message); }
+}
+
+async function loadScenariosFromServer() {
+  try {
+    const data = await apiFetch('/scenarios');
+    scenarios  = (data.scenarios || []).map(s => ({ ...s, time: new Date(s.savedAt).toLocaleTimeString() }));
+    renderScenarios();
+  } catch (e) { console.error('Could not load scenarios:', e.message); }
+}
+
+function renderScenarios() {
+  const c = document.getElementById('scenarios-container');
+  if (!scenarios.length) {
+    c.innerHTML = '<div class="scenario-empty"><div class="big-icon">📋</div><div class="empty-title">No scenarios saved yet</div><div class="empty-sub">Run a simulation and press "Save this scenario" to compare results here.</div></div>';
+    return;
+  }
+  const cm = { green:'var(--green)', amber:'var(--amber)', red:'var(--red)', blue:'var(--blue)' };
+  const lm = { green:'Stable', amber:'Stressed', red:'Overloaded', blue:'Overgeneration' };
+  c.innerHTML = '<div class="scenario-list">' + scenarios.map(s => `
+    <div class="scenario-card">
+      <div style="flex:1">
+        <div class="sc-name">${s.eventLabel}</div>
+        <div class="sc-meta">Saved at ${s.time} · Balance: ${s.balance >= 0 ? '+' : ''}${s.balance} kW</div>
+        <div class="sc-chips">
+          <span class="chip">☀️ ${s.panels} panels</span>
+          <span class="chip">💨 ${s.turbines} turbines</span>
+          <span class="chip">🚗 ${s.evs} EVs</span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="sc-risk" style="color:${cm[s.colorState]}">${s.risk}%</div>
+        <div style="font-size:11px;color:${cm[s.colorState]};margin-bottom:8px">${lm[s.colorState]}</div>
+        <div class="sc-actions">
+          <button class="btn-sm" onclick="loadScenario('${s.scenarioId}')">Load</button>
+          <button class="btn-sm danger" onclick="deleteScenario('${s.scenarioId}')">Delete</button>
+        </div>
+      </div>
+    </div>`).join('') + '</div>';
+}
+
+function loadScenario(id) {
+  const s = scenarios.find(x => x.scenarioId === id);
+  if (!s) return;
+  state.panels = s.panels; state.turbines = s.turbines; state.evs = s.evs;
+  document.getElementById('s-panels').value = s.panels;
+  document.getElementById('s-turbines').value = s.turbines;
+  document.getElementById('s-evs').value = s.evs;
+  document.getElementById('v-panels').textContent = s.panels;
+  document.getElementById('v-turbines').textContent = s.turbines;
+  document.getElementById('v-evs').textContent = s.evs;
+  const em = {'Normal day':'normal','Solar noon surge':'solar','EV rush hour':'ev','Wind drops 80%':'wind'};
+  triggerEvent(em[s.eventLabel] || 'normal');
+  showPage('simulate');
+  showToast('Scenario loaded');
+}
+
+async function deleteScenario(id) {
+  try {
+    await apiFetch('/scenarios/' + id, { method: 'DELETE' });
+    scenarios = scenarios.filter(x => x.scenarioId !== id);
+    renderScenarios();
+    showToast('Scenario deleted');
+  } catch (e) { showToast('Delete failed: ' + e.message); }
+}
+
+// PAGE SWITCHING
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const order = ['intro','simulate','scenarios','bill','info'];
+  const i = order.indexOf(name);
+  if (i !== -1) document.querySelectorAll('.nav-tab')[i].classList.add('active');
+  if (name === 'bill') startBillChart();
+  if (name === 'scenarios') loadScenariosFromServer();
+}
+
+// INFO SUB-TABS
+function showInfoTab(section, btn) {
+  document.querySelectorAll('.info-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.info-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('info-' + section).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ACCORDION (generic)
+function toggleAcc(id) {
+  const item = document.getElementById(id);
+  const body = document.getElementById(id + '-body');
+  item.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// SAVING TIPS (nested accordion)
+function toggleSaving(id) {
+  const item = document.getElementById(id);
+  const body = document.getElementById(id + '-body');
+  item.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// ── BILL PAGE ───────────────────────────────────────────────────────
+
+let applianceChart = null;
+let nbrChart = null;
+
+// Hourly demand shape (24 values, 0-1 scale, index 0 = midnight)
+// Represents typical Saudi household pattern — used by both the
+// timeline chart and the estimated bill calculation.
+const hourLoad = [
+  0.12,0.10,0.09,0.09,0.10,0.18,  // midnight to 5am: standby only
+  0.55,0.80,0.70,0.55,0.50,0.52,  // 6am to 11am: morning spike
+  0.50,0.48,0.50,0.55,0.60,0.95,  // noon to 5pm: steady then rising
+  1.00,0.92,0.88,0.75,0.55,0.30   // 6pm to 11pm: evening peak + wind-down
+];
+
+function getBillVals() {
+  return {
+    kwh:    Number(document.getElementById('bill-kwh').value)          || 300,
+    sar:    Number(document.getElementById('bill-actual-sar').value)   || 54,
+    rate:   Number(document.getElementById('bill-rate').value)         || 0.18,
+    panels: Number(document.getElementById('bill-panels').value)       || 0,
+    evs:    Number(document.getElementById('bill-ev-count').value)     || 0,
+    people: Number(document.getElementById('bill-people').value)       || 1
+  };
+}
+
+function renderBill() {
+  const v = getBillVals();
+
+  // ── Bill header ──────────────────────────────────────────────────
+  document.getElementById('bh-amount').textContent = 'SAR ' + v.sar.toFixed(2);
+  document.getElementById('bh-kwh').textContent    = v.kwh + ' kWh this month';
+  if (currentUser) document.getElementById('bh-name').textContent = currentUser.name;
+
+  // ── Tier logic (Saudi SEC tiers based on actual tariff) ──────────
+  // Tier 1: 0 to 2000 kWh @ 0.18
+  // Tier 2: 2001 to 4000 kWh @ 0.26
+  // Tier 3: above 4000 kWh @ 0.32
+  let tier, tierColor;
+  if (v.kwh <= 2000)      { tier = 1; tierColor = 'var(--green)'; }
+  else if (v.kwh <= 4000) { tier = 2; tierColor = 'var(--amber)'; }
+  else                    { tier = 3; tierColor = 'var(--red)'; }
+
+  // Tariff bar (max visual scale = 6000 kWh)
+  const fillPct = Math.min(100, (v.kwh / 6000) * 100);
+  document.getElementById('tariff-fill').style.width      = fillPct + '%';
+  document.getElementById('tariff-fill').style.background = tierColor;
+  document.getElementById('tariff-marker').style.left     = fillPct + '%';
+  document.getElementById('tariff-marker-label').textContent = v.kwh;
+  const tierText = ['', 'Tier 1 — efficient usage', 'Tier 2 — above average usage', 'Tier 3 — high usage, highest rate applies'];
+  document.getElementById('tariff-status').innerHTML = 'You are in <strong>Tier ' + tier + '</strong> — ' + tierText[tier].split('— ')[1];
+
+  // Tier 3 warning
+  const warning = document.getElementById('tier3-warning');
+  tier === 3 ? warning.classList.remove('hidden') : warning.classList.add('hidden');
+
+  // ── Appliance breakdown donut chart ─────────────────────────────
+  // Saudi household appliance share estimates (% of total kWh):
+  // AC: 65%, Water heater: 10%, Lighting: 7%, Fridge: 6%, Washer/dryer: 5%, Other: 7%
+  const shares = [
+    { label: 'Air Conditioning', pct: 0.65, color: '#2563EB' },
+    { label: 'Water Heater',     pct: 0.10, color: '#D97706' },
+    { label: 'Lighting',         pct: 0.07, color: '#EAB308' },
+    { label: 'Refrigerator',     pct: 0.06, color: '#16A34A' },
+    { label: 'Washer / Dryer',   pct: 0.05, color: '#8B5CF6' },
+    { label: 'Other',            pct: 0.07, color: '#94A3B8' }
+  ];
+  const appData  = shares.map(s => Math.round(v.kwh * s.pct));
+  const appColors = shares.map(s => s.color);
+
+  if (applianceChart) {
+    applianceChart.data.datasets[0].data = appData;
+    applianceChart.update('none');
+  } else {
+    const ctx = document.getElementById('applianceChart').getContext('2d');
+    applianceChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: shares.map(s => s.label),
+        datasets: [{ data: appData, backgroundColor: appColors, borderWidth: 2, borderColor: '#fff' }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' kWh (' + Math.round(c.parsed / v.kwh * 100) + '%)' } }
+        },
+        cutout: '62%'
+      }
+    });
+  }
+
+  // Legend below donut
+  document.getElementById('appliance-legend').innerHTML = shares.map((s, i) =>
+    `<div class="al-item"><div class="al-dot" style="background:${s.color}"></div>${s.label}: ${appData[i]} kWh</div>`
+  ).join('');
+
+  // ── Time-of-day timeline bar chart ──────────────────────────────
+  // 24 bars, one per hour, colored green→amber→red by load intensity.
+  // Built with Chart.js so it has proper axes, hover tooltips, and hour labels.
+
+  const hourLabels = [
+    '12am','1am','2am','3am','4am','5am',
+    '6am','7am','8am','9am','10am','11am',
+    '12pm','1pm','2pm','3pm','4pm','5pm',
+    '6pm','7pm','8pm','9pm','10pm','11pm'
+  ];
+
+  // Scale hourLoad values to kW based on user's monthly kWh
+  const dailyKwh    = v.kwh / 30;
+  const shapeSum    = hourLoad.reduce((a, b) => a + b, 0);
+  const hourKw      = hourLoad.map(h => +((h / shapeSum) * dailyKwh * 24).toFixed(2));
+
+  // Color each bar: green for low load, amber for mid, red for peak
+  const maxKw       = Math.max(...hourKw);
+  const barColors   = hourKw.map(kw => {
+    const t = kw / maxKw;
+    if (t < 0.4)      return 'rgba(22,163,74,0.75)';   // green
+    else if (t < 0.7) return 'rgba(217,119,6,0.80)';   // amber
+    else              return 'rgba(220,38,38,0.85)';    // red
+  });
+
+  if (window._timelineChart) {
+    window._timelineChart.data.datasets[0].data = hourKw;
+    window._timelineChart.data.datasets[0].backgroundColor = barColors;
+    window._timelineChart.update('none');
+  } else {
+    const tCtx = document.getElementById('timelineChart').getContext('2d');
+    window._timelineChart = new Chart(tCtx, {
+      type: 'bar',
+      data: {
+        labels: hourLabels,
+        datasets: [{
+          data: hourKw,
+          backgroundColor: barColors,
+          borderRadius: 3,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: items => items[0].label,
+              label: item => item.parsed.y.toFixed(2) + ' kW average draw'
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { display: false },   // hour labels shown via .timeline-labels below
+            grid: { display: false }
+          },
+          y: {
+            min: 0,
+            ticks: {
+              color: '#64748B',
+              font: { size: 10 },
+              maxTicksLimit: 4,
+              callback: v => v + ' kW'
+            },
+            grid: { color: '#E2E8F0' }
+          }
+        }
+      }
+    });
+  }
+
+  // Peak hour note
+  const peakHour = hourKw.indexOf(maxKw);
+  document.getElementById('heatmap-peak-note').textContent =
+    'Peak draw is around ' + hourLabels[peakHour] + ' (' + maxKw.toFixed(1) + ' kW). ' +
+    'Shifting heavy appliances away from this time lowers your bill and reduces grid stress.';
+
+  // ── Estimated bill (Section 2) ───────────────────────────────────
+  const solarOffset = v.panels * 30;
+  const evExtra     = v.evs * 120;
+  // Average kWh for this household size (benchmark: 80 kWh per person per month in Saudi Arabia)
+  const avgKwh      = v.people * 80;
+  const estKwh      = Math.max(0, avgKwh + evExtra - solarOffset);
+  const estSAR      = estKwh * v.rate;
+
+  document.getElementById('est-real').textContent    = 'SAR ' + v.sar.toFixed(0);
+  document.getElementById('est-real-kwh').textContent = v.kwh + ' kWh';
+  document.getElementById('est-calc').textContent    = 'SAR ' + estSAR.toFixed(0);
+  document.getElementById('est-calc-kwh').textContent = estKwh + ' kWh avg estimate';
+
+  const diffSAR  = v.sar - estSAR;
+  const diffPct  = Math.round((diffSAR / estSAR) * 100);
+  const diffEl   = document.getElementById('est-diff-card');
+  const diffVal  = document.getElementById('est-diff-val');
+  const diffSub  = document.getElementById('est-diff-sub');
+
+  if (Math.abs(diffPct) <= 10) {
+    diffVal.textContent = 'On target ✓';
+    diffVal.style.color = 'var(--green-dark)';
+    diffSub.textContent = 'Your actual bill is within 10% of what is expected for your household.';
+    diffEl.style.borderColor = 'var(--green)';
+  } else if (diffSAR > 0) {
+    diffVal.textContent = '+' + diffPct + '% above estimate';
+    diffVal.style.color = 'var(--red)';
+    diffSub.textContent = 'Your real bill is SAR ' + Math.abs(diffSAR).toFixed(0) + ' more than expected. See suggestions below.';
+    diffEl.style.borderColor = 'var(--red)';
+  } else {
+    diffVal.textContent = Math.abs(diffPct) + '% below estimate';
+    diffVal.style.color = 'var(--green-dark)';
+    diffSub.textContent = 'Your real bill is SAR ' + Math.abs(diffSAR).toFixed(0) + ' less than expected. Efficient household!';
+    diffEl.style.borderColor = 'var(--green)';
+  }
+
+  // ── Government sustainability response (Section 3) ───────────────
+  const grBadge   = document.getElementById('gr-badge');
+  const grMsg     = document.getElementById('gr-message');
+  const grTips    = document.getElementById('gr-tips');
+  const grCard    = document.getElementById('govt-response-card');
+
+  // Badge + card color based on tier and comparison
+  let badge, badgeClass, message, tips, actionTitle, actionDesc, actionSaving;
+  const kwhPerPerson = v.kwh / v.people;
+
+  if (tier === 3) {
+    badge = '⚠️ High Usage Alert'; badgeClass = 'red-badge';
+    grCard.style.background = '#FEF2F2';
+    grCard.style.borderColor = 'var(--red)';
+    message = 'Your household is in Tier 3 — the highest energy band. SEC recommends an immediate energy audit and will send a formal advisory notice. Sustained Tier 3 usage may attract an increased rate penalty from next billing cycle.';
+    tips = ['AC audit', 'Smart thermostat', 'Solar panels', 'Off-peak EV charging', 'LED lighting upgrade'];
+    actionTitle = 'Book a free SEC energy audit';
+    actionDesc  = 'Households in Tier 3 qualify for a free home energy audit from SEC. An engineer will identify your top 3 appliance offenders and provide a tailored reduction plan.';
+    actionSaving = 'Free service';
+  } else if (tier === 2 || diffPct > 15) {
+    badge = '🟡 Room to Improve'; badgeClass = 'amber-badge';
+    grCard.style.background = '#FFFBEB';
+    grCard.style.borderColor = 'var(--amber)';
+    message = 'Your household is above average usage. The government sustainability program recommends two changes this month that could bring you into Tier 1 and reduce your carbon footprint.';
+    tips = v.panels === 0
+      ? ['Add solar panels', 'Raise AC to 22°C', 'Off-peak appliances']
+      : ['Raise AC to 22°C', 'Off-peak appliances', 'LED bulbs'];
+    if (v.evs > 0 && v.panels === 0) tips.unshift('Charge EV from solar');
+    actionTitle = 'Raise your AC thermostat to 22°C';
+    actionDesc  = 'AC is 65% of your bill. A 2°C increase saves 10 to 15% with no noticeable comfort change — the single fastest win available.';
+    actionSaving = 'SAR ' + Math.round(v.sar * 0.12) + '/month';
+  } else {
+    badge = '🟢 Green Household'; badgeClass = '';
+    grCard.style.background = '#F0FDF4';
+    grCard.style.borderColor = 'var(--green)';
+    message = 'Your household is performing well. You are within the efficient usage band. The government sustainability program recognizes low-consumption households. Keep it up.';
+    tips = v.panels > 0
+      ? ['Solar generating', 'Below avg usage', 'Good efficiency']
+      : ['Consider solar', 'Maintain habits', 'Share with neighbors'];
+    actionTitle = v.panels === 0 ? 'Add solar panels to go net-zero' : 'Share your habits with neighbors';
+    actionDesc  = v.panels === 0
+      ? 'You are already efficient. Adding 6 solar panels would make your household carbon-neutral and earn you a GridGuard Green Certificate.'
+      : 'Efficient households that share tips via the SEC Community Portal help raise the neighborhood average and contribute to the national net-zero target.';
+    actionSaving = v.panels === 0 ? 'SAR ' + Math.round(180 * v.rate) + '/month' : 'Community impact';
+  }
+
+  grBadge.textContent = badge;
+  grBadge.className   = 'gr-badge ' + badgeClass;
+  grMsg.textContent   = message;
+  grTips.innerHTML    = tips.map(t => `<span class="gr-tip-pill">${t}</span>`).join('');
+  document.getElementById('gr-action-title').textContent   = actionTitle;
+  document.getElementById('gr-action-desc').textContent    = actionDesc;
+  document.getElementById('gr-action-saving').textContent  = actionSaving;
+}
+
+function startBillChart() { renderBill(); }
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// STARTUP
+initChart();
+triggerEvent('normal');
+setInterval(updateScreen, 1500);
+// Check if user already has a valid session from a previous visit
+checkExistingSession();
+</script>
+</body>
+</html>

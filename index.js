@@ -13,7 +13,6 @@ const scenariosRouter        = require('./routes/scenarios');
 const billRouter             = require('./routes/bill');
 
 const app  = express();
-const PORT = process.env.PORT || 3000;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(cors({ origin: '*', methods: ['GET','POST','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
@@ -37,13 +36,9 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-async function start() {
-  await initDB();      // connect to MySQL and create tables
-  app.listen(PORT, () => {
-    console.log(`\nGridGuard running at http://localhost:${PORT}`);
-    console.log(`Health check:        http://localhost:${PORT}/api/health\n`);
-  });
-}
+// ── Start (Vercel Serverless Optimization) ────────────────────────────────────
+// Run the database initialization immediately for serverless execution
+initDB().catch(err => console.error("Database initialization failed:", err));
 
-start();
+// Export the app instance for Vercel instead of calling app.listen()
+module.exports = app;
